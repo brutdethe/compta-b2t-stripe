@@ -1,0 +1,24 @@
+{
+  "name": "compta-b2t-stripe",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brutdethe/compta-b2t-stripe.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/brutdethe/compta-b2t-stripe/issues"
+  },
+  "homepage": "https://github.com/brutdethe/compta-b2t-stripe#readme",
+  "dependencies": {
+    "csv-writer": "^1.6.0",
+    "stripe": "^16.5.0"
+  }
+}
