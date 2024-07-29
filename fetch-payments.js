@@ -1,18 +1,46 @@
 const stripe = require('stripe');
 const { createObjectCsvWriter } = require('csv-writer');
 const fs = require('fs');
+const process = require('process');
 
 // Load environment variables from .env.json
 const env = JSON.parse(fs.readFileSync('.env.json', 'utf8'));
 const stripeClient = stripe(env.STRIPE_PRIVATE);
 
 /**
- * Fetches all payments from Stripe and generates a CSV file with accounting entries.
+ * Converts a date string in the format "YYYY-MM-DD" to a Unix timestamp.
+ * @param {string} dateString - The date string to convert.
+ * @returns {number} The Unix timestamp.
  */
-async function fetchPaymentsAndGenerateCSV() {
+function dateToUnixTimestamp(dateString) {
+    return Math.floor(new Date(dateString).getTime() / 1000);
+}
+
+/**
+ * Ensures that the directory exists. If it does not, it creates it.
+ * @param {string} dir - The directory path.
+ */
+function ensureDirectoryExistence(dir) {
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+    }
+}
+
+/**
+ * Fetches all payments from Stripe within a specified date range and generates a CSV file with accounting entries.
+ * @param {number} startDate - The start date as a Unix timestamp.
+ * @param {number} endDate - The end date as a Unix timestamp.
+ * @param {string} startDateString - The start date as a string.
+ * @param {string} endDateString - The end date as a string.
+ */
+async function fetchPaymentsAndGenerateCSV(startDate, endDate, startDateString, endDateString) {
     try {
+        const directory = 'generated_reports';
+        ensureDirectoryExistence(directory);
+
+        const fileName = `${directory}/ecritures_comptables_${startDateString}_to_${endDateString}.csv`;
         const csvWriter = createObjectCsvWriter({
-            path: 'ecritures_comptables.csv',
+            path: fileName,
             header: [
                 { id: 'payer', title: 'qui paye ?' },
                 { id: 'date', title: 'date' },
@@ -33,6 +61,10 @@ async function fetchPaymentsAndGenerateCSV() {
         while (hasMore) {
             const params = {
                 limit: 100,
+                created: {
+                    gte: startDate,
+                    lte: endDate,
+                },
                 ...(startingAfter && { starting_after: startingAfter }),
             };
 
@@ -102,10 +134,21 @@ async function fetchPaymentsAndGenerateCSV() {
         });
 
         await csvWriter.writeRecords(records);
-        console.log('CSV file created successfully.');
+        console.log(`CSV file ${fileName} created successfully.`);
     } catch (error) {
         console.error('Error fetching payments or generating CSV:', error);
     }
 }
 
-fetchPaymentsAndGenerateCSV();
+// Read start and end dates from command line arguments
+const startDateString = process.argv[2];
+const endDateString = process.argv[3];
+const startDate = dateToUnixTimestamp(startDateString);
+const endDate = dateToUnixTimestamp(endDateString);
+
+if (!startDate || !endDate) {
+    console.error('Please provide start and end dates in the format YYYY-MM-DD');
+    process.exit(1);
+}
+
+fetchPaymentsAndGenerateCSV(startDate, endDate, startDateString, endDateString);

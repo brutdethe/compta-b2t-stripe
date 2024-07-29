@@ -1,5 +1,6 @@
 # US1 - Backlog
 
-- [ ] récupérer tous les paiements et générer les écritures
-- [ ] définir une plage
+- [x] écrire un README
+- [x] récupérer tous les paiements et générer les écritures
+- [x] définir une plage de date
 - [ ] récupérer le contenu pour pouvoir affecter les comptes 7xx
