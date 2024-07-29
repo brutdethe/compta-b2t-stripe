@@ -43,13 +43,13 @@ Cette application Node.js récupère les paiements depuis Stripe, les transforme
 
 ## Utilisation
 
-Pour exécuter le script et générer le fichier CSV, utilisez la commande suivante :
+Pour exécuter le script et générer le fichier CSV dans le dossier generated_reports, utilisez la commande suivante :
 
 ```bash
-node fetch-payments.js
+node fetch-payments.js 2023-01-01 2023-12-31
 ```
 
-Le fichier CSV `ecritures_comptables.csv` sera généré dans le répertoire du projet.
+Cela générera un fichier CSV nommé `ecritures_comptables_2023-01-01_to_2023-12-31.csv` dans le répertoire generated_reports du projet.
 
 ## Exemple de sortie CSV
 
