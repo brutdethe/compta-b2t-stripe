@@ -27,6 +27,67 @@ function ensureDirectoryExistence(dir) {
 }
 
 /**
+ * Converts a Unix timestamp to a date string in the format "YYYYMMDD".
+ * @param {number} timestamp - The Unix timestamp to convert.
+ * @returns {string} The formatted date string.
+ */
+function formatDate(timestamp) {
+    const date = new Date(timestamp * 1000);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}${month}${day}`;
+}
+
+/**
+ * Determines the post type based on the items description.
+ * @param {string} items - The concatenated item descriptions.
+ * @returns {string} The post type.
+ */
+function determinePostType(items) {
+    items = items.toLowerCase();
+    if (items.includes('formation') || items.includes('cérémonie')) {
+        return 'prestations de services';
+    } else if (items.includes('billet') || items.includes('cotisation') || items.includes('adhésion')) {
+        return 'cotisations';
+    } else if (items.includes('don')) {
+        return 'dons manuels';
+    } else {
+        return 'ventes de marchandises';
+    }
+}
+
+/**
+ * Retrieves items descriptions from invoices or checkout sessions.
+ * @param {object} payment - The payment object.
+ * @returns {string} The concatenated item descriptions.
+ */
+async function getItemsDescription(payment) {
+    let items = '';
+
+    if (payment.invoice) {
+        const invoiceItems = await stripeClient.invoiceItems.list({
+            invoice: payment.invoice
+        });
+        items = invoiceItems.data.map(item => item.description).join(', ');
+    }
+
+    if (payment.payment_intent) {
+        const sessionList = await stripeClient.checkout.sessions.list({
+            payment_intent: payment.payment_intent,
+        });
+
+        if (sessionList.data.length > 0) {
+            const session = sessionList.data[0];
+            const lineItems = await stripeClient.checkout.sessions.listLineItems(session.id);
+            items = lineItems.data.map(item => item.description).join(', ');
+        }
+    }
+
+    return items;
+}
+
+/**
  * Fetches all payments from Stripe within a specified date range and generates a CSV file with accounting entries.
  * @param {number} startDate - The start date as a Unix timestamp.
  * @param {number} endDate - The end date as a Unix timestamp.
@@ -74,27 +135,30 @@ async function fetchPaymentsAndGenerateCSV(startDate, endDate, startDateString, 
                 if (payment.paid && payment.status === 'succeeded') {
                     const balanceTransaction = await stripeClient.balanceTransactions.retrieve(payment.balance_transaction);
                     const date = new Date(payment.created * 1000).toISOString().split('T')[0];
-                    const convertedDate = new Date(payment.created * 1000).toLocaleDateString('fr-FR');
+                    const formattedDate = formatDate(payment.created);
                     const amount = (balanceTransaction.amount / 100).toFixed(2);
                     const fee = (balanceTransaction.fee / 100).toFixed(2);
                     const netAmount = (balanceTransaction.net / 100).toFixed(2);
 
-                    let invoiceNumber = '';
+                    const items = await getItemsDescription(payment);
+                    const postType = determinePostType(items);
+
+                    let invoiceNumber = `${formattedDate}_`;
                     if (payment.invoice) {
                         const invoice = await stripeClient.invoices.retrieve(payment.invoice);
-                        invoiceNumber = invoice.number || '';
+                        invoiceNumber += invoice.number || '';
                     }
 
                     records.push({
                         payer: 'Membre',
                         date: date, // Using ISO format for sorting
                         receiver: 'Stripe',
-                        post: 'ventes de marchandises',
+                        post: postType,
                         amount: `${amount} €`,
                         nature: 'cb',
                         pointage: '',
                         note: 'Vente stripe',
-                        invoice: invoiceNumber
+                        invoice: invoiceNumber,
                     }, {
                         payer: 'Stripe',
                         date: date, // Using ISO format for sorting
@@ -104,7 +168,7 @@ async function fetchPaymentsAndGenerateCSV(startDate, endDate, startDateString, 
                         nature: 'prv',
                         pointage: '',
                         note: 'commission stripe',
-                        invoice: invoiceNumber
+                        invoice: invoiceNumber,
                     }, {
                         payer: 'Stripe',
                         date: date, // Using ISO format for sorting
@@ -114,7 +178,7 @@ async function fetchPaymentsAndGenerateCSV(startDate, endDate, startDateString, 
                         nature: 'cb',
                         pointage: 'x',
                         note: 'transfert stripe',
-                        invoice: invoiceNumber
+                        invoice: invoiceNumber,
                     });
                 }
             }
