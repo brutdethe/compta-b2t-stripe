@@ -1,86 +1,7 @@
-const stripe = require('stripe');
-const { createObjectCsvWriter } = require('csv-writer');
-const fs = require('fs');
-const process = require('process');
-
-// Load environment variables from .env.json
-const env = JSON.parse(fs.readFileSync('.env.json', 'utf8'));
-const stripeClient = stripe(env.STRIPE_PRIVATE);
-
-const createDirectoryIfNotExists = dir => {
-    if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-    }
-};
-
-const dateToUnixTimestamp = dateString => Math.floor(new Date(dateString).getTime() / 1000);
-
-const formatDate = timestamp => {
-    const date = new Date(timestamp * 1000);
-    return date.toISOString().split('T')[0].replace(/-/g, '');
-};
-
-const determinePostType = items => {
-    const lowerItems = items.toLowerCase();
-    if (lowerItems.includes('formation') || lowerItems.includes('cérémonie')) {
-        return 'prestations de services';
-    }
-    if (lowerItems.includes('billet') || lowerItems.includes('cotisation') || lowerItems.includes('adhésion')) {
-        return 'cotisations';
-    }
-    if (lowerItems.includes('don')) {
-        return 'dons manuels';
-    }
-    return 'ventes de marchandises';
-};
-
-const getItemsDescription = async payment => {
-    let items = '';
-
-    if (payment.invoice) {
-        const invoiceItems = await stripeClient.invoiceItems.list({ invoice: payment.invoice });
-        items = invoiceItems.data.map(item => item.description).join(', ');
-    }
-
-    if (payment.payment_intent) {
-        const sessionList = await stripeClient.checkout.sessions.list({ payment_intent: payment.payment_intent });
-        if (sessionList.data.length > 0) {
-            const session = sessionList.data[0];
-            const lineItems = await stripeClient.checkout.sessions.listLineItems(session.id);
-            items = lineItems.data.map(item => item.description).join(', ');
-        }
-    }
-
-    return items;
-};
-
-const generateCSV = async(fileName, records) => {
-    const csvWriter = createObjectCsvWriter({
-        path: fileName,
-        header: [
-            { id: 'payer', title: 'qui paye ?' },
-            { id: 'date', title: 'date' },
-            { id: 'receiver', title: 'qui reçoit' },
-            { id: 'post', title: 'poste' },
-            { id: 'amount', title: 'montant' },
-            { id: 'nature', title: 'nature' },
-            { id: 'pointage', title: 'pointage' },
-            { id: 'note', title: 'note' },
-            { id: 'invoice', title: 'facture correspondante' }
-        ]
-    });
-
-    // Sort records by date
-    records.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-    // Convert dates back to localized format
-    records.forEach(record => {
-        record.date = new Date(record.date).toLocaleDateString('fr-FR');
-    });
-
-    await csvWriter.writeRecords(records);
-    console.log(`CSV file ${fileName} created successfully.`);
-};
+const { createDirectoryIfNotExists, generateCSV } = require('./utils/file');
+const { dateToUnixTimestamp, formatDate } = require('./utils/date');
+const determinePostType = require('./utils/postType');
+const { getItemsDescription, fetchPayments, fetchBalanceTransaction, fetchInvoice } = require('./utils/stripe');
 
 const fetchPaymentsAndGenerateCSV = async(startDate, endDate, startDateString, endDateString) => {
     try {
@@ -95,15 +16,14 @@ const fetchPaymentsAndGenerateCSV = async(startDate, endDate, startDateString, e
         while (hasMore) {
             const params = {
                 limit: 100,
-                created: { gte: startDate, lte: endDate },
-                ...(startingAfter && { starting_after: startingAfter })
+                created: { gte: startDate, lte: endDate }
             };
 
-            const payments = await stripeClient.charges.list(params);
+            const payments = await fetchPayments(params, startingAfter);
 
             for (const payment of payments.data) {
                 if (payment.paid && payment.status === 'succeeded') {
-                    const balanceTransaction = await stripeClient.balanceTransactions.retrieve(payment.balance_transaction);
+                    const balanceTransaction = await fetchBalanceTransaction(payment.balance_transaction);
                     const date = new Date(payment.created * 1000).toISOString().split('T')[0];
                     const formattedDate = formatDate(payment.created);
                     const amount = (balanceTransaction.amount / 100).toFixed(2);
@@ -114,7 +34,7 @@ const fetchPaymentsAndGenerateCSV = async(startDate, endDate, startDateString, e
 
                     let invoiceNumber = '';
                     if (payment.invoice) {
-                        const invoice = await stripeClient.invoices.retrieve(payment.invoice);
+                        const invoice = await fetchInvoice(payment.invoice);
                         invoiceNumber = `${formattedDate}_${invoice.number || ''}`;
                     }
 

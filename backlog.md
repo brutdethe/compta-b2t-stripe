@@ -1,5 +1,6 @@
-# US1 - Backlog
+# Backlog
 
+## US1 - convertir les paiements stripe en écriture 
 - [x] écrire un README
 - [x] récupérer tous les paiements et générer les écritures
 - [x] définir une plage de date
