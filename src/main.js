@@ -3,6 +3,10 @@ const { dateToUnixTimestamp, formatDate } = require('./utils/date');
 const determinePostType = require('./utils/postType');
 const { getItemsDescription, fetchPayments, fetchBalanceTransaction, fetchInvoice } = require('./utils/stripe');
 
+const formatAmount = amount => {
+    return (amount / 100).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+};
+
 const fetchPaymentsAndGenerateCSV = async(startDate, endDate, startDateString, endDateString) => {
     try {
         const directory = 'generated_reports';
@@ -26,9 +30,9 @@ const fetchPaymentsAndGenerateCSV = async(startDate, endDate, startDateString, e
                     const balanceTransaction = await fetchBalanceTransaction(payment.balance_transaction);
                     const date = new Date(payment.created * 1000).toISOString().split('T')[0];
                     const formattedDate = formatDate(payment.created);
-                    const amount = (balanceTransaction.amount / 100).toFixed(2);
-                    const fee = (balanceTransaction.fee / 100).toFixed(2);
-                    const netAmount = (balanceTransaction.net / 100).toFixed(2);
+                    const amount = formatAmount(balanceTransaction.amount);
+                    const fee = formatAmount(balanceTransaction.fee);
+                    const netAmount = formatAmount(balanceTransaction.net);
                     const items = await getItemsDescription(payment);
                     const postType = determinePostType(items);
 
@@ -43,7 +47,7 @@ const fetchPaymentsAndGenerateCSV = async(startDate, endDate, startDateString, e
                         date: date,
                         receiver: 'Stripe',
                         post: postType,
-                        amount: `${amount} €`,
+                        amount: amount,
                         nature: 'cb',
                         pointage: '',
                         note: 'Vente stripe',
@@ -53,7 +57,7 @@ const fetchPaymentsAndGenerateCSV = async(startDate, endDate, startDateString, e
                         date: date,
                         receiver: 'Stripe',
                         post: 'commissions',
-                        amount: `${fee} €`,
+                        amount: fee,
                         nature: 'prv',
                         pointage: '',
                         note: 'commission stripe',
@@ -63,7 +67,7 @@ const fetchPaymentsAndGenerateCSV = async(startDate, endDate, startDateString, e
                         date: date,
                         receiver: 'B2T',
                         post: 'caisse stripe',
-                        amount: `${netAmount} €`,
+                        amount: netAmount,
                         nature: 'cb',
                         pointage: 'x',
                         note: 'transfert stripe',

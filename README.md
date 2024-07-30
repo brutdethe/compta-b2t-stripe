@@ -74,9 +74,9 @@ Cela générera un fichier CSV nommé `ecritures_comptables_2023-01-01_to_2023-1
 
 | qui paye ? | date       | qui reçoit | poste                | montant   | nature | pointage | note            | facture correspondante |
 |------------|------------|------------|----------------------|-----------|--------|----------|-----------------|------------------------|
-| Membre     | 18/05/2021 | Stripe     | ventes de marchandises | 625,74 €  | cb     |          | Vente stripe    | 2021-0001              |
-| Stripe     | 18/05/2021 | Stripe     | commissions          | 9,01 €    | prv    |          | commission stripe | 2021-0001              |
-| Stripe     | 18/05/2021 | B2T        | caisse stripe        | 616,73 €  | cb     | x        | transfert stripe | 2021-0001              |
+| Membre     | 2021-05-18 | Stripe     | ventes de marchandises | 625,74 €  | cb     |          | Vente stripe    | 2021-0001              |
+| Stripe     | 2021-05-18 | Stripe     | commissions          | 9,01 €    | prv    |          | commission stripe | 2021-0001              |
+| Stripe     | 2021-05-18 | B2T        | caisse stripe        | 616,73 €  | cb     | x        | transfert stripe | 2021-0001              |
 
 ## Auteur
 

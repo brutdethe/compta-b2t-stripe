@@ -26,11 +26,6 @@ const generateCSV = async(fileName, records) => {
     // Sort records by date
     records.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-    // Convert dates back to localized format
-    records.forEach(record => {
-        record.date = new Date(record.date).toLocaleDateString('fr-FR');
-    });
-
     await csvWriter.writeRecords(records);
     console.log(`CSV file ${fileName} created successfully.`);
 };
