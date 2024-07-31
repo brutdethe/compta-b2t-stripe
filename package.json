@@ -11,8 +11,8 @@
     "url": "git+https://github.com/brutdethe/compta-b2t-stripe.git"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "pntbr",
+  "license": "CC0-1.0",
   "bugs": {
     "url": "https://github.com/brutdethe/compta-b2t-stripe/issues"
   },
