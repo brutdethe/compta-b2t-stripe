@@ -7,7 +7,7 @@ const determinePostType = items => {
         return 'cotisations';
     }
     if (lowerItems.includes('don')) {
-        return 'dons manuels';
+        return 'dons';
     }
     return 'ventes de marchandises';
 };
