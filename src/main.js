@@ -65,7 +65,7 @@ const fetchPaymentsAndGenerateCSV = async(startDate, endDate, startDateString, e
                     }, {
                         payer: 'Stripe',
                         date: date,
-                        receiver: 'B2T',
+                        receiver: 'Association',
                         post: 'caisse stripe',
                         amount: netAmount,
                         nature: 'cb',
